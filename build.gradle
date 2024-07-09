@@ -1,227 +1,104 @@
 plugins {
-    id("java")
-    id("java-library")
-    id("idea")
-    id("maven-publish")
-    id("org.jetbrains.gradle.plugin.idea-ext") version("${ideaext_version}") // Required for NeoGradle
-    id("com.modrinth.minotaur") version("${minotaur_version}")
-    id("net.darkhax.curseforgegradle") version("${curseforgegradle_version}")
-    id("com.github.breadmoirai.github-release") version("${githubrelease_version}")
-    id("org.ajoberstar.grgit.service") version("${grgitservice_version}")
+    id 'java-library'
+    id 'eclipse'
+    id 'idea'
+    id 'maven-publish'
+    id 'net.neoforged.gradle.userdev' version '7.0.153'
 }
 
-subprojects {
-    version = mod_version
-    group = mod_group
+version = mod_version
+group = mod_group_id
 
-    apply(plugin: "java")
-    apply(plugin: "java-library")
-    apply(plugin: "idea")
-    apply(plugin: "maven-publish")
+repositories {
+    maven { url = "https://maven.shedaniel.me/" }
+    mavenLocal()
+}
 
-    if (project.name != "common") {
-        apply(plugin: "com.modrinth.minotaur")
-        apply(plugin: "com.github.breadmoirai.github-release")
-        apply(plugin: "org.ajoberstar.grgit.service")
+base {
+    archivesName = mod_id
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+runs {
+    configureEach {
+        systemProperty 'forge.logging.markers', 'REGISTRIES'
+        systemProperty 'forge.logging.console.level', 'debug'
+
+        modSource project.sourceSets.main
     }
 
-    java.toolchain.languageVersion = JavaLanguageVersion.of(Integer.valueOf(java_version))
-
-    jar {
-        from(rootProject.file("LICENSE")) {
-            rename { "${it}_${mod_name}" }
-        }
-        manifest {
-            attributes([
-                "Specification-Title"     : mod_name,
-                "Specification-Vendor"    : mod_owner,
-                "Specification-Version"   : project.jar.archiveVersion,
-                "Implementation-Title"    : project.name,
-                "Implementation-Version"  : project.jar.archiveVersion,
-                "Implementation-Vendor"   : mod_owner,
-                "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ"),
-                "Timestamp"               : System.currentTimeMillis(),
-                "Built-On-Java"           : "${System.getProperty('java.vm.version')} (${System.getProperty('java.vm.vendor')})",
-                "Built-On-Minecraft"      : minecraft_version
-            ])
-        }
-    }
-    java.withSourcesJar()
-    sourcesJar {
-        from(rootProject.file("LICENSE")) {
-            rename { "${it}_${mod_name}" }
-        }
+    client {
+        systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
     }
 
+    server {
+        systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
+        programArgument '--nogui'
+    }
+
+    gameTestServer {
+        systemProperty 'forge.enabledGameTestNamespaces', project.mod_id
+    }
+
+    data {
+        programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
+    }
+}
+
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+configurations {
+    runtimeClasspath.extendsFrom localRuntime
+}
+
+dependencies {
+    implementation "net.neoforged:neoforge:${neo_version}"
+
+    api "me.shedaniel.cloth:cloth-config-neoforge:${cloth_version}"
+}
+
+tasks.withType(ProcessResources).configureEach {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            neo_version_range      : neo_version_range,
+            loader_version_range   : loader_version_range,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            mod_authors            : mod_authors,
+            mod_description        : mod_description
+    ]
+    inputs.properties replaceProperties
+
+    filesMatching(['META-INF/mods.toml']) {
+        expand replaceProperties
+    }
+}
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            from components.java
+        }
+    }
     repositories {
         maven {
-            name = "Modrinth"
-            url = "https://api.modrinth.com/maven"
-        }
-        maven {
-            name = "Shedaniel"
-            url = "https://maven.shedaniel.me/"
-        }
-    }
-
-    tasks.withType(JavaCompile).configureEach {
-        it.options.encoding = "UTF-8"
-        it.options.getRelease().set(Integer.valueOf(java_version))
-    }
-
-    processResources {
-        def expandProps = [
-                "project_group": project.group,
-                "mod_version": mod_version,
-                "mod_group": mod_group,
-                "mod_id": mod_id,
-                "mod_name": mod_name,
-                "mod_description": mod_description,
-                "mod_icon": "assets/" + mod_id + "/icon.png",
-                "mod_owner": mod_owner,
-                "mod_authors_list": asJsonList(mod_authors),
-                "mod_contributors_list": asJsonList(mod_contributors),
-                "mod_authors_string": mod_authors.replace(",", ", "),
-                "mod_contributors_string": mod_contributors.replace(",", ", "),
-                "mod_license": mod_license,
-                "mod_environment": mod_environment,
-                "java_version": java_version,
-                "java_versions_fabric_list": asJsonList(java_versions_fabric),
-                "java_versions_neoforge": java_versions_neoforge,
-                "minecraft_version": minecraft_version,
-                "minecraft_versions_fabric_list": asJsonList(minecraft_versions_fabric),
-                "minecraft_versions_neoforge": minecraft_versions_neoforge,
-                "fabric_loader_version": fabric_loader_version,
-                "fabric_loader_versions_list": asJsonList(fabric_loader_versions),
-                "fabric_api_version": fabric_api_version,
-                "fabric_api_versions_list": asJsonList(fabric_api_versions),
-                "neoforge_loader_versions": neoforge_loader_versions,
-                "neoforge_version": neoforge_version,
-                "neoforge_versions": neoforge_versions,
-                "clothconfig_version": clothconfig_version,
-                "clothconfig_versions_fabric_list": asJsonList(clothconfig_versions_fabric),
-                "clothconfig_versions_neoforge": clothconfig_versions_neoforge,
-                "modmenu_version": modmenu_version,
-                "modmenu_versions_list": asJsonList(modmenu_versions),
-                "homepage_url": homepage_url,
-                "sources_url": sources_url,
-                "issues_url": issues_url,
-                "contact_url": contact_url
-        ]
-
-        filesMatching(["pack.mcmeta", "*.mod.json", "META-INF/*mods.toml", "*.mixins.json", "assets/"+mod_id+"/lang/*.json"]) {
-            expand expandProps
-        }
-        inputs.properties(expandProps)
-    }
-
-    tasks.withType(GenerateModuleMetadata).configureEach {
-        enabled = false
-    }
-
-    afterEvaluate {
-        if (name != "common") {
-            modrinth {
-                token = System.getenv().MODRINTH_TOKEN ? System.getenv().MODRINTH_TOKEN : "empty"
-                projectId = modrinth_id
-                versionNumber = mod_version
-                versionType = release_type
-                versionName = "v${mod_version}-${capsLoader(name)}-${minecraft_version}"
-                changelog = rootProject.file("changelog.md").text
-                uploadFile = name == "fabric" ? remapJar : jar
-                loaders = project.property("release_mod_loaders_${name}").split(",") as List
-                gameVersions = project.property("release_game_versions_${name}").split(",") as List
-
-                def deps = []
-                if (project.hasProperty("release_required_dep_ids_${name}_mr")) {
-                    project.property("release_required_dep_ids_${name}_mr").split(",").each { String id ->
-                        deps << new com.modrinth.minotaur.dependencies.ModDependency(id, "required")
-                    }
-                }
-                if (project.hasProperty("release_optional_dep_ids_${name}_mr")) {
-                    project.property("release_optional_dep_ids_${name}_mr").split(",").each { String id ->
-                        deps << new com.modrinth.minotaur.dependencies.ModDependency(id, "optional")
-                    }
-                }
-                if (project.hasProperty("release_incompatible_dep_ids_${name}_mr")) {
-                    project.property("release_incompatible_dep_ids_${name}_mr").split(",").each { String id ->
-                        deps << new com.modrinth.minotaur.dependencies.ModDependency(id, "incompatible")
-                    }
-                }
-                dependencies = deps
-                syncBodyFrom = rootProject.file("README.md").text
-            }
-            tasks.modrinth.onlyIf { System.getenv().MODRINTH_TOKEN }
-            tasks.modrinth.dependsOn(build, tasks.modrinthSyncBody)
-            tasks.modrinthSyncBody.onlyIf { System.getenv().MODRINTH_TOKEN }
-
-            task curseforge(type: net.darkhax.curseforgegradle.TaskPublishCurseForge) {
-                apiToken = System.getenv().CURSEFORGE_TOKEN ? System.getenv().CURSEFORGE_TOKEN : ""
-                if (apiToken.isBlank()) return
-
-                disableVersionDetection()
-                String module = project.name
-
-                def file = upload(curseforge_id, module == "fabric" ? remapJar : jar)
-                file.displayName = "v${mod_version}-${capsLoader(module)}-${minecraft_version}"
-                file.releaseType = release_type
-                file.changelog = rootProject.file("changelog.md").text
-                file.changelogType = 'markdown'
-                project.property("release_mod_loaders_${module}").split(",").each { String id ->
-                    file.addModLoader(id)
-                }
-                project.property("release_game_versions_${module}").split(",").each { String id ->
-                    file.addGameVersion(id, module)
-                }
-
-                if (project.hasProperty("release_required_dep_ids_${module}_cf")) {
-                    project.property("release_required_dep_ids_${module}_cf").split(",").each { String id ->
-                        file.addRequirement(id)
-                    }
-                }
-                if (project.hasProperty("release_optional_dep_ids_${module}_cf")) {
-                    project.property("release_optional_dep_ids_${module}_cf").split(",").each { String id ->
-                        file.addOptional(id)
-                    }
-                }
-                if (project.hasProperty("release_incompatible_dep_ids_${module}_cf")) {
-                    project.property("release_incompatible_dep_ids_${module}_cf").split(",").each { String id ->
-                        file.addIncompatibility(id)
-                    }
-                }
-            }
-            tasks.curseforge.onlyIf { System.getenv().CURSEFORGE_TOKEN }
-            tasks.curseforge.dependsOn(build)
-
-            githubRelease {
-                token = System.getenv().GITHUB_TOKEN ? System.getenv().GITHUB_TOKEN : "empty"
-                owner = github_repo_owner
-                repo = github_repo
-                tagName = "v${mod_version}"
-                prerelease = release_type == "alpha" || release_type == "beta"
-                releaseName = "v${mod_version} for ${minecraft_version}"
-                body = rootProject.file("changelog.md").text
-                targetCommitish = grgitService.service.get().grgit.branch.current().name
-                overwrite = false
-                allowUploadToExisting = true
-                releaseAssets = List.of(name == "fabric" ? remapJar : jar, sourcesJar)
-            }
-            tasks.githubRelease.onlyIf { System.getenv().GITHUB_TOKEN }
-            tasks.githubRelease.dependsOn(build)
+            url "file://${project.projectDir}/repo"
         }
     }
 }
 
-static asJsonList(String versions) {
-    return versions.split(",").collect { "\"$it\"" }.join(',')
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
 }
 
-static String capsLoader(String loader) {
-    switch(loader) {
-        case "fabric": return "Fabric"
-        case "quilt": return "Quilt"
-        case "forge": return "Forge"
-        case "neoforge": return "NeoForge"
-        default: return loader
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
     }
 }

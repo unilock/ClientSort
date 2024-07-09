@@ -1,0 +1,38 @@
+{
+  "screen.clientsort.default": "用戶端排序",
+  "screen.clientsort.options": "用戶端排序選項",
+
+  "message.clientsort.install_cloth": "安裝 Cloth Config API 以調整模組選項。",
+  "message.clientsort.go_modrinth": "在 Modrinth 查看",
+
+  "clientsort.key_group": "用戶端排序",
+  "key.clientsort.sort": "排序背包",
+
+  "option.clientsort.general": "一般",
+  "option.clientsort.interaction_rate_server": "多人遊戲排序速率",
+  "option.clientsort.interaction_rate_client": "單人遊戲排序速率",
+  "option.clientsort.interaction_rate.tooltip": "降低以更快排序，如果遇到封包速率問題則提高",
+  "option.clientsort.hotbar_mode": "快捷欄模式",
+  "option.clientsort.sorting": "排序",
+  "option.clientsort.sort_mode": "排序模式",
+  "option.clientsort.shift_sort_mode": "Shift 排序模式",
+  "option.clientsort.ctrl_sort_mode": "Ctrl 排序模式",
+  "option.clientsort.alt_sort_mode": "Alt 排序模式",
+  "option.clientsort.optimized_creative_sorting": "最佳化創造模式排序",
+
+  "hotbar_mode.clientsort.merge": "合併",
+  "hotbar_mode.clientsort.merge.tooltip": "快捷欄將視為主物品欄的一部分",
+  "hotbar_mode.clientsort.split": "分開",
+  "hotbar_mode.clientsort.split.tooltip": "快捷欄將視為不同的物品欄",
+  "hotbar_mode.clientsort.off": "停用",
+  "hotbar_mode.clientsort.off.tooltip": "快捷欄不能排序",
+
+  "sort_order.clientsort.none": "無",
+  "sort_order.clientsort.alphabet": "A-Z",
+  "sort_order.clientsort.creative": "創造模式",
+  "sort_order.clientsort.quantity": "數量",
+  "sort_order.clientsort.raw_id": "原始 ID",
+
+  "option.clientsort.error.low": "太低",
+  "option.clientsort.error.high": "太高"
+}
